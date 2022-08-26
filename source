@@ -1,0 +1,197 @@
+/*
+
+2 The following is a program designed to aid in server resource management by
+
+non-administrative users who need to monitor resources and manage hard disks.
+
+3 Designed to run on most *nix systems.
+
+4 */
+
+5
+
+6 #include <iostream>
+
+7 #include <cstdlib>
+
+8 #include <string.h>
+
+9
+
+10 #define MAX_PATH_LEN 1024
+
+11 #define MAX_CMD_LEN 2048
+
+12
+
+13 using namespace std;
+
+14
+
+15 #ifdef _WIN32
+
+16 #define CLEAR_SCREEN "cls"
+
+17 #define DISK_INFO "wmic logicaldisk get name & wmic logicaldisk get freespace"
+
+18 // int unmountOrMount not used, but saves code space by not overloading for
+
+platform independence
+
+19 char* executeMount(char* password, char* path, int unmountOrMount)
+
+20 {
+
+21 char* catString = new char[(strlen("echo|set /p password=") + strlen(password) +
+
+strlen(" | runas /user:administrator \"mountvol ") + strlen(path) + 1)];
+
+22 strcpy(catString, "echo|set /p password=");
+
+23 strcat(catString, password);
+
+24 strcat(catString, " | runas /user:administrator \"mountvol ");
+
+25 strcat(catString, path);
+
+26 //Equivalent command: system("echo|set /p password=" + adminPassword + " |
+
+runas /user:administrator mountvol" + path);
+
+27 return catString;
+
+28 }
+
+29 #else
+
+30 #define CLEAR_SCREEN "clear"
+
+31 #define DISK_INFO "df"
+
+32 char* executeMount(char* password, char* path, int unmountOrMount)
+
+33 {
+
+34 if (unmountOrMount == 0)
+
+35 char* catString = new char[(strlen("echo ") + strlen(password) + strlen(" |
+
+sudo -S umount ") + strlen(path) + 1)];
+
+36 else
+
+37 char* catString = new char[(strlen("echo ") + strlen(password) + strlen(" |
+
+sudo -S mount ") + strlen(path) + 1)];
+
+38
+
+39 strcpy(catString, "echo ");
+
+40 strcat(catString, password);
+
+41 if (unmountOrMount == 0)
+
+42 strcat(catString, " | sudo -S umount ");
+
+43 else
+
+44 strcat(catString, " | sudo -S mount ");
+
+45
+
+46 strcat(catString, path);
+
+47 //Equivalent command: system("echo " + adminPassword + " | sudo -S
+
+[umount|mount] " + path);
+
+48 return catString;
+
+49 }
+
+50 #endif
+
+51
+
+52 int main() {
+
+53 char path[MAX_PATH_LEN] = "";//1024
+
+54 char input[MAX_CMD_LEN] = "";//2048
+
+55
+
+56 // Program needs to execute commands as root/administrator.
+
+57 char adminPassword[] = "CorrectHorseBatteryStaple_1337_P@$$w0rd";
+
+58
+
+59 system(CLEAR_SCREEN);
+
+60
+
+61 // Display some informative statistics for the less-technical user.
+
+62 cout << "The current disk usage statistics:" << endl;
+
+63 system(DISK_INFO);
+
+64 system(CLEAR_SCREEN);
+
+65 cout << "If on windows, add \' \\D\"\' to the end of the path." << endl;
+
+66 cout << "Please enter the path to unmount: ";
+
+67 streamsize n = 1024;
+
+68 cin.getline(path, n);
+
+69 cout << endl;
+
+70
+
+71 char* command = executeMount(adminPassword, path, 0);
+
+72 cout << "Executing: " << command << endl;
+
+73
+
+74 system(command);
+
+75
+
+76 cout << "Would you like to replace the disk with a new one? (Y/n): ";
+
+77 cin >> input;
+
+78
+
+79 if (input[0] == 'n')
+
+80 cout << "leaving disk unmounted. Exiting" << endl;
+
+81 else
+
+82 {
+
+83 command = executeMount(adminPassword, path, 1);
+
+84 system(command);
+
+85 cout << "Disk has been replaced." << endl;
+
+86 }
+
+87
+
+88 delete command;
+
+89
+
+90 return 0;
+
+91 }
+
+92
